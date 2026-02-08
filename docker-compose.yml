@@ -1,0 +1,24 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mystery
+      POSTGRES_PASSWORD: mystery
+      POSTGRES_DB: mysterydb
+    volumes:
+      - db_data:/var/lib/postgresql/data
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgres://mystery:mystery@db:5432/mysterydb?schema=public
+      PORT: "3030"
+      NODE_ENV: production
+    ports:
+      - "3030:3030"
+volumes:
+  db_data:
