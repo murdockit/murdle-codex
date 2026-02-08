@@ -53,10 +53,14 @@
             <textarea
               id="clues"
               name="clues"
-              placeholder="Summarize the timeline, red herrings, and witness notes."
+              placeholder="One clue per line for the checklist."
               rows="5"
               required
             ></textarea>
+          </label>
+          <label>
+            Tags
+            <input id="tags" name="tags" type="text" placeholder="noir, holiday, hard" />
           </label>
           <div class="triple">
             <label>
@@ -90,10 +94,28 @@
               ></textarea>
             </label>
           </div>
+          <div class="solution-block">
+            <h3>Solution</h3>
+            <div class="triple">
+              <label>
+                Suspect
+                <select id="solution-suspect" required></select>
+              </label>
+              <label>
+                Location
+                <select id="solution-location" required></select>
+              </label>
+              <label>
+                Weapon
+                <select id="solution-weapon" required></select>
+              </label>
+            </div>
+          </div>
           <div class="form-actions">
             <button type="submit" id="save-button">Save Mystery</button>
             <button type="button" id="cancel-edit" class="ghost hidden">Cancel Edit</button>
           </div>
+          <p id="draft-status" class="draft-status"></p>
           <p id="form-error" class="form-error" role="alert"></p>
         </form>
       </section>
@@ -119,10 +141,16 @@
             <h3 id="detail-title"></h3>
             <div class="detail-actions">
               <button id="edit-mystery" class="ghost">Edit</button>
+              <button id="clone-mystery" class="ghost">Clone</button>
               <button id="delete-mystery" class="danger">Delete</button>
             </div>
           </div>
+          <div id="detail-tags" class="tag-row"></div>
           <p id="detail-clues" class="detail-clues"></p>
+          <div class="checklist-block">
+            <h4>Clue Checklist</h4>
+            <div id="clue-checklist" class="checklist"></div>
+          </div>
           <div class="detail-columns">
             <div>
               <h4>Suspects</h4>
@@ -137,6 +165,10 @@
               <ul id="detail-weapons"></ul>
             </div>
           </div>
+          <div class="solution-display">
+            <h4>Solution</h4>
+            <div id="detail-solution" class="solution-chips"></div>
+          </div>
 
           <div class="grid-header">
             <h4>Logic Grid</h4>
@@ -146,9 +178,34 @@
                 <span class="legend-chip yes">✔</span> Confirmed
                 <span class="legend-chip no">✕</span> Ruled out
               </div>
+              <button id="grid-fullscreen" class="ghost" type="button">Fullscreen</button>
             </div>
           </div>
-          <div id="logic-grid" class="logic-grid"></div>
+          <div class="grid-toolbar" role="toolbar" aria-label="Grid tools">
+            <button class="tool-button active" type="button" data-tool="unknown">
+              <span class="tool-icon">?</span>
+              Unknown
+            </button>
+            <button class="tool-button" type="button" data-tool="yes">
+              <span class="tool-icon">✔</span>
+              Yes
+            </button>
+            <button class="tool-button" type="button" data-tool="no">
+              <span class="tool-icon">✕</span>
+              No
+            </button>
+            <button class="tool-button" type="button" data-tool="erase">
+              <span class="tool-icon">⌫</span>
+              Erase
+            </button>
+          </div>
+          <div class="grid-shell">
+            <div class="grid-left">
+              <div class="grid-left-label">WEAPONS</div>
+              <div class="grid-left-label">LOCATIONS</div>
+            </div>
+            <div id="logic-grid" class="logic-grid"></div>
+          </div>
         </div>
       </section>
     </main>

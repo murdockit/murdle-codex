@@ -25,6 +25,13 @@ function validatePayload(body) {
   const suspects = sanitizeList(body.suspects);
   const locations = sanitizeList(body.locations);
   const weapons = sanitizeList(body.weapons);
+  const tags = sanitizeList(body.tags);
+  const solutionSuspect =
+    typeof body.solutionSuspect === "string" ? body.solutionSuspect.trim() : "";
+  const solutionLocation =
+    typeof body.solutionLocation === "string" ? body.solutionLocation.trim() : "";
+  const solutionWeapon =
+    typeof body.solutionWeapon === "string" ? body.solutionWeapon.trim() : "";
 
   const errors = [];
   if (!title) errors.push("Title is required.");
@@ -32,11 +39,33 @@ function validatePayload(body) {
   if (suspects.length === 0) errors.push("At least one suspect is required.");
   if (locations.length === 0) errors.push("At least one location is required.");
   if (weapons.length === 0) errors.push("At least one weapon is required.");
+  if (!solutionSuspect) errors.push("Solution suspect is required.");
+  if (!solutionLocation) errors.push("Solution location is required.");
+  if (!solutionWeapon) errors.push("Solution weapon is required.");
+  if (solutionSuspect && !suspects.includes(solutionSuspect)) {
+    errors.push("Solution suspect must match a suspect.");
+  }
+  if (solutionLocation && !locations.includes(solutionLocation)) {
+    errors.push("Solution location must match a location.");
+  }
+  if (solutionWeapon && !weapons.includes(solutionWeapon)) {
+    errors.push("Solution weapon must match a weapon.");
+  }
 
   return {
     ok: errors.length === 0,
     errors,
-    data: { title, clues, suspects, locations, weapons }
+    data: {
+      title,
+      clues,
+      suspects,
+      locations,
+      weapons,
+      tags,
+      solutionSuspect,
+      solutionLocation,
+      solutionWeapon
+    }
   };
 }
 
@@ -59,6 +88,47 @@ function validateGridPayload(body) {
   };
 }
 
+function validateDraftPayload(body) {
+  const data = body && typeof body === "object" ? body : {};
+  const title = typeof data.title === "string" ? data.title : "";
+  const clues = typeof data.clues === "string" ? data.clues : "";
+  const suspects = typeof data.suspects === "string" ? data.suspects : "";
+  const locations = typeof data.locations === "string" ? data.locations : "";
+  const weapons = typeof data.weapons === "string" ? data.weapons : "";
+  const tags = typeof data.tags === "string" ? data.tags : "";
+  const solutionSuspect =
+    typeof data.solutionSuspect === "string" ? data.solutionSuspect : "";
+  const solutionLocation =
+    typeof data.solutionLocation === "string" ? data.solutionLocation : "";
+  const solutionWeapon =
+    typeof data.solutionWeapon === "string" ? data.solutionWeapon : "";
+
+  return {
+    ok: true,
+    data: {
+      title,
+      clues,
+      suspects,
+      locations,
+      weapons,
+      tags,
+      solutionSuspect,
+      solutionLocation,
+      solutionWeapon
+    }
+  };
+}
+
+function validateChecklistPayload(body) {
+  const items = Array.isArray(body.items) ? body.items : [];
+  const normalized = items.map((item) => ({
+    text: typeof item.text === "string" ? item.text : "",
+    done: Boolean(item.done),
+    note: typeof item.note === "string" ? item.note : ""
+  }));
+  return { ok: true, data: normalized };
+}
+
 app.get("/api/mysteries", async (req, res) => {
   try {
     const items = await prisma.mystery.findMany({
@@ -69,7 +139,8 @@ app.get("/api/mysteries", async (req, res) => {
         createdAt: true,
         suspects: true,
         locations: true,
-        weapons: true
+        weapons: true,
+        tags: true
       }
     });
 
@@ -80,7 +151,8 @@ app.get("/api/mysteries", async (req, res) => {
         createdAt: item.createdAt,
         suspectCount: Array.isArray(item.suspects) ? item.suspects.length : 0,
         locationCount: Array.isArray(item.locations) ? item.locations.length : 0,
-        weaponCount: Array.isArray(item.weapons) ? item.weapons.length : 0
+        weaponCount: Array.isArray(item.weapons) ? item.weapons.length : 0,
+        tags: item.tags || []
       }))
     );
   } catch (err) {
@@ -119,6 +191,7 @@ app.put("/api/mysteries/:id", async (req, res) => {
       where: { id: req.params.id },
       data: validation.data
     });
+    await prisma.mysteryDraft.deleteMany({ where: { mysteryId: req.params.id } });
     res.json(updated);
   } catch (err) {
     res.status(500).json({ error: "Failed to update mystery." });
@@ -131,6 +204,62 @@ app.delete("/api/mysteries/:id", async (req, res) => {
     res.status(204).send();
   } catch (err) {
     res.status(500).json({ error: "Failed to delete mystery." });
+  }
+});
+
+app.get("/api/mysteries/:id/draft", async (req, res) => {
+  try {
+    const draft = await prisma.mysteryDraft.findUnique({
+      where: { mysteryId: req.params.id }
+    });
+    if (!draft) return res.json({ data: null, updatedAt: null });
+    res.json({ data: draft.data, updatedAt: draft.updatedAt });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load draft." });
+  }
+});
+
+app.put("/api/mysteries/:id/draft", async (req, res) => {
+  const validation = validateDraftPayload(req.body);
+  if (!validation.ok) return res.status(400).json({ errors: ["Invalid draft payload."] });
+
+  try {
+    const saved = await prisma.mysteryDraft.upsert({
+      where: { mysteryId: req.params.id },
+      update: { data: validation.data },
+      create: { mysteryId: req.params.id, data: validation.data }
+    });
+    res.json({ data: saved.data, updatedAt: saved.updatedAt });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to save draft." });
+  }
+});
+
+app.get("/api/mysteries/:id/checklist", async (req, res) => {
+  try {
+    const checklist = await prisma.clueChecklist.findUnique({
+      where: { mysteryId: req.params.id }
+    });
+    if (!checklist) return res.json({ items: [], updatedAt: null });
+    res.json({ items: checklist.items, updatedAt: checklist.updatedAt });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load checklist." });
+  }
+});
+
+app.put("/api/mysteries/:id/checklist", async (req, res) => {
+  const validation = validateChecklistPayload(req.body);
+  if (!validation.ok) return res.status(400).json({ errors: ["Invalid checklist payload."] });
+
+  try {
+    const saved = await prisma.clueChecklist.upsert({
+      where: { mysteryId: req.params.id },
+      update: { items: validation.data },
+      create: { mysteryId: req.params.id, items: validation.data }
+    });
+    res.json({ items: saved.items, updatedAt: saved.updatedAt });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to save checklist." });
   }
 });
 

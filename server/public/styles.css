@@ -215,6 +215,17 @@ button.danger {
   min-height: 1.2em;
 }
 
+.draft-status {
+  color: var(--muted);
+  margin: 6px 0 0;
+  min-height: 1.2em;
+  font-size: 0.85rem;
+}
+
+.draft-status.saved {
+  color: var(--accent-dark);
+}
+
 .card-list {
   display: grid;
   gap: 12px;
@@ -295,6 +306,90 @@ button.danger {
   border-bottom: 1px dashed var(--border);
 }
 
+.solution-block h3 {
+  margin: 8px 0 12px;
+  font-family: "Fraunces", "Georgia", serif;
+}
+
+.solution-display {
+  margin-bottom: 20px;
+}
+
+.solution-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.solution-chip {
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #fff0cf;
+  border: 1px solid var(--border);
+  font-weight: 600;
+  color: var(--accent-dark);
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 12px;
+}
+
+.tag-chip {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #f1f3f8;
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.checklist-block h4 {
+  margin: 18px 0 10px;
+  font-family: "Fraunces", "Georgia", serif;
+}
+
+.checklist {
+  display: grid;
+  gap: 10px;
+}
+
+.checklist-item {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: #fffdfa;
+}
+
+.checklist-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.checklist-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+}
+
+.checklist-text {
+  font-weight: 600;
+}
+
+.checklist-note {
+  width: 100%;
+  font: inherit;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: #fffdf8;
+  color: var(--ink);
+}
+
 .grid-header {
   display: flex;
   justify-content: space-between;
@@ -308,6 +403,57 @@ button.danger {
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
+}
+
+.grid-controls .ghost {
+  padding: 8px 14px;
+  font-size: 0.9rem;
+}
+
+.grid-toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.tool-button {
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #fffdf8;
+  color: var(--accent-dark);
+  padding: 8px 14px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: none;
+}
+
+.tool-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(15, 118, 110, 0.18);
+}
+
+.tool-button.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+
+.tool-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 8px;
+  background: rgba(15, 118, 110, 0.15);
+  font-weight: 700;
+}
+
+.tool-button.active .tool-icon {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .legend {
@@ -340,17 +486,71 @@ button.danger {
   color: var(--danger);
 }
 
+.grid-shell {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.grid-left {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  align-items: center;
+  justify-items: center;
+  color: var(--muted);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  font-size: 0.7rem;
+}
+
+.grid-left-label {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
 .logic-grid {
   margin-top: 12px;
   overflow-x: auto;
   border-radius: 18px;
   border: 1px solid var(--border);
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.grid-shell.fullscreen {
+  position: fixed;
+  inset: 16px;
+  background: var(--panel);
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  box-shadow: 0 30px 70px rgba(17, 16, 32, 0.3);
+  padding: 16px;
+  z-index: 50;
+  grid-template-columns: 56px 1fr;
+}
+
+.grid-shell.fullscreen .logic-grid {
+  max-height: calc(100vh - 120px);
+}
+
+.grid-shell.fullscreen::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.35);
+  z-index: -1;
+}
+
+.grid-shell.fullscreen .grid-left {
+  font-size: 0.75rem;
 }
 
 .grid-table {
   width: 100%;
   border-collapse: collapse;
   min-width: 480px;
+  table-layout: fixed;
 }
 
 .grid-table th,
@@ -358,6 +558,35 @@ button.danger {
   border: 1px solid var(--border);
   text-align: center;
   padding: 10px;
+}
+
+.grid-table th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.grid-table th.header-token {
+  z-index: 4;
+}
+
+.grid-table th.group {
+  top: 0;
+  z-index: 5;
+}
+
+.grid-table th.sticky-left {
+  position: sticky;
+  left: 0;
+  z-index: 4;
+}
+
+.grid-table th.sticky-left.header-token {
+  z-index: 6;
+}
+
+.grid-table th.sticky-left.group {
+  z-index: 7;
 }
 
 .grid-table th {
@@ -371,6 +600,42 @@ button.danger {
   text-transform: uppercase;
   letter-spacing: 0.12em;
   font-size: 0.75rem;
+}
+
+.grid-table th.header-token {
+  background: #fffaf1;
+}
+
+.token {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  font-weight: 700;
+  color: #1b1b1f;
+  background: #e7e3dc;
+  margin: 0 auto 6px;
+}
+
+.token.suspect {
+  background: #d6ccff;
+}
+
+.token.location {
+  background: #ffd8a6;
+}
+
+.token.weapon {
+  background: #d6f3ff;
+}
+
+.token-label {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--muted);
+  line-height: 1.2;
 }
 
 .grid-table th.divider,
@@ -416,6 +681,10 @@ button.danger {
   .detail-panel {
     grid-column: span 1;
   }
+
+  .grid-shell {
+    grid-template-columns: 40px 1fr;
+  }
 }
 
 @media (max-width: 720px) {
@@ -430,5 +699,61 @@ button.danger {
   .detail-header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .grid-table {
+    min-width: 0;
+    font-size: 0.75rem;
+  }
+
+  .grid-table th,
+  .grid-table td {
+    padding: 6px;
+  }
+
+  .grid-shell {
+    grid-template-columns: 34px 1fr;
+  }
+
+  .grid-left {
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+  }
+
+  .token {
+    width: 28px;
+    height: 28px;
+    font-size: 0.7rem;
+  }
+
+  .grid-toolbar {
+    gap: 8px;
+  }
+
+  .tool-button {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+
+  .grid-shell.fullscreen {
+    inset: 8px;
+    grid-template-columns: 40px 1fr;
+  }
+}
+
+@media (min-width: 721px) and (max-width: 1180px) {
+  .grid-table {
+    font-size: 0.85rem;
+  }
+
+  .grid-table th,
+  .grid-table td {
+    padding: 8px;
+  }
+
+  .token {
+    width: 30px;
+    height: 30px;
+    font-size: 0.75rem;
   }
 }

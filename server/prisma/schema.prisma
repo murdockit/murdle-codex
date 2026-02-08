@@ -15,10 +15,16 @@ model Mystery {
   suspects  String[]
   locations String[]
   weapons   String[]
+  tags      String[]
+  solutionSuspect  String?
+  solutionLocation String?
+  solutionWeapon   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   gridStates GridState[]
+  draft      MysteryDraft?
+  checklist  ClueChecklist?
 }
 
 model GridState {
@@ -33,4 +39,22 @@ model GridState {
   mystery Mystery @relation(fields: [mysteryId], references: [id], onDelete: Cascade)
 
   @@unique([mysteryId, mode])
+}
+
+model MysteryDraft {
+  id        String   @id @default(cuid())
+  mysteryId String   @unique
+  data      Json
+  updatedAt DateTime @updatedAt
+
+  mystery Mystery @relation(fields: [mysteryId], references: [id], onDelete: Cascade)
+}
+
+model ClueChecklist {
+  id        String   @id @default(cuid())
+  mysteryId String   @unique
+  items     Json
+  updatedAt DateTime @updatedAt
+
+  mystery Mystery @relation(fields: [mysteryId], references: [id], onDelete: Cascade)
 }
