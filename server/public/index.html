@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Logic-Grid Mystery Builder</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Space+Grotesk:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="glow" aria-hidden="true"></div>
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Logic-Grid Mystery Builder</p>
+        <h1>Draft a case. Track the alibis. Solve the grid.</h1>
+        <p class="subhead">
+          Build rich mysteries with suspects, locations, and weapons. Keep a local
+          logic grid as you work the case.
+        </p>
+        <div class="hero-meta">
+          <span id="mystery-count">0 mysteries</span>
+          <span id="last-updated">Waiting for your first case</span>
+        </div>
+      </div>
+      <div class="hero-card">
+        <h2>Quick Start</h2>
+        <ul>
+          <li>Enter suspects, locations, and weapons.</li>
+          <li>Save to build your case file.</li>
+          <li>Use the grid to mark clues.</li>
+        </ul>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel">
+        <div class="panel-header">
+          <h2 id="form-title">New Mystery</h2>
+          <button id="reset-form" class="ghost">Reset</button>
+        </div>
+        <form id="mystery-form">
+          <label>
+            Title
+            <input id="title" name="title" type="text" placeholder="The Midnight Gala" required />
+          </label>
+          <label>
+            Clues
+            <textarea
+              id="clues"
+              name="clues"
+              placeholder="Summarize the timeline, red herrings, and witness notes."
+              rows="5"
+              required
+            ></textarea>
+          </label>
+          <div class="triple">
+            <label>
+              Suspects
+              <textarea
+                id="suspects"
+                name="suspects"
+                placeholder="One per line"
+                rows="5"
+                required
+              ></textarea>
+            </label>
+            <label>
+              Locations
+              <textarea
+                id="locations"
+                name="locations"
+                placeholder="One per line"
+                rows="5"
+                required
+              ></textarea>
+            </label>
+            <label>
+              Weapons
+              <textarea
+                id="weapons"
+                name="weapons"
+                placeholder="One per line"
+                rows="5"
+                required
+              ></textarea>
+            </label>
+          </div>
+          <div class="form-actions">
+            <button type="submit" id="save-button">Save Mystery</button>
+            <button type="button" id="cancel-edit" class="ghost hidden">Cancel Edit</button>
+          </div>
+          <p id="form-error" class="form-error" role="alert"></p>
+        </form>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Case Files</h2>
+          <div class="panel-sub">Newest first</div>
+        </div>
+        <div id="mystery-list" class="card-list"></div>
+      </section>
+
+      <section class="panel detail-panel">
+        <div class="panel-header">
+          <h2>Active Case</h2>
+          <div class="panel-sub" id="detail-subtitle">Select a case to view</div>
+        </div>
+        <div id="detail-empty" class="empty-state">
+          Select a case file to view details and open the logic grid.
+        </div>
+        <div id="detail-content" class="hidden">
+          <div class="detail-header">
+            <h3 id="detail-title"></h3>
+            <div class="detail-actions">
+              <button id="edit-mystery" class="ghost">Edit</button>
+              <button id="delete-mystery" class="danger">Delete</button>
+            </div>
+          </div>
+          <p id="detail-clues" class="detail-clues"></p>
+          <div class="detail-columns">
+            <div>
+              <h4>Suspects</h4>
+              <ul id="detail-suspects"></ul>
+            </div>
+            <div>
+              <h4>Locations</h4>
+              <ul id="detail-locations"></ul>
+            </div>
+            <div>
+              <h4>Weapons</h4>
+              <ul id="detail-weapons"></ul>
+            </div>
+          </div>
+
+          <div class="grid-header">
+            <h4>Logic Grid</h4>
+            <div class="grid-controls">
+              <label class="grid-select">
+                Compare
+                <select id="grid-mode">
+                  <option value="locations">Suspects × Locations</option>
+                  <option value="weapons">Suspects × Weapons</option>
+                </select>
+              </label>
+              <div class="legend">
+                <span class="legend-chip unknown">?</span> Unknown
+                <span class="legend-chip yes">✔</span> Confirmed
+                <span class="legend-chip no">✕</span> Ruled out
+              </div>
+            </div>
+          </div>
+          <div id="logic-grid" class="logic-grid"></div>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

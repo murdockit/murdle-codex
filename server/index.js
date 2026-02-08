@@ -1,10 +1,14 @@
+const http = require("http");
 const path = require("path");
 const express = require("express");
 const { PrismaClient } = require("@prisma/client");
+const { WebSocketServer } = require("ws");
 
 const app = express();
 const prisma = new PrismaClient();
 const port = process.env.PORT || 3030;
+const server = http.createServer(app);
+const wss = new WebSocketServer({ server });
 
 app.use(express.json({ limit: "1mb" }));
 
@@ -33,6 +37,25 @@ function validatePayload(body) {
     ok: errors.length === 0,
     errors,
     data: { title, clues, suspects, locations, weapons }
+  };
+}
+
+function validateGridPayload(body) {
+  const mode = typeof body.mode === "string" ? body.mode.trim() : "";
+  const rows = Number.isInteger(body.rows) ? body.rows : Number(body.rows);
+  const cols = Number.isInteger(body.cols) ? body.cols : Number(body.cols);
+  const cells = body.cells && typeof body.cells === "object" ? body.cells : null;
+
+  const errors = [];
+  if (!mode) errors.push("Mode is required.");
+  if (!Number.isInteger(rows) || rows < 0) errors.push("Rows must be a non-negative integer.");
+  if (!Number.isInteger(cols) || cols < 0) errors.push("Cols must be a non-negative integer.");
+  if (!cells) errors.push("Cells payload is required.");
+
+  return {
+    ok: errors.length === 0,
+    errors,
+    data: { mode, rows, cols, cells }
   };
 }
 
@@ -111,6 +134,61 @@ app.delete("/api/mysteries/:id", async (req, res) => {
   }
 });
 
+app.get("/api/mysteries/:id/grid", async (req, res) => {
+  const mode = typeof req.query.mode === "string" ? req.query.mode.trim() : "";
+  if (!mode) return res.status(400).json({ error: "Mode is required." });
+
+  try {
+    const grid = await prisma.gridState.findUnique({
+      where: { mysteryId_mode: { mysteryId: req.params.id, mode } }
+    });
+    if (!grid) return res.json({ rows: 0, cols: 0, cells: {} });
+    res.json({ rows: grid.rows, cols: grid.cols, cells: grid.cells });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load grid state." });
+  }
+});
+
+app.post("/api/mysteries/:id/grid", async (req, res) => {
+  const validation = validateGridPayload(req.body);
+  if (!validation.ok) return res.status(400).json({ errors: validation.errors });
+
+  try {
+    const saved = await prisma.gridState.upsert({
+      where: { mysteryId_mode: { mysteryId: req.params.id, mode: validation.data.mode } },
+      update: {
+        rows: validation.data.rows,
+        cols: validation.data.cols,
+        cells: validation.data.cells
+      },
+      create: {
+        mysteryId: req.params.id,
+        mode: validation.data.mode,
+        rows: validation.data.rows,
+        cols: validation.data.cols,
+        cells: validation.data.cells
+      }
+    });
+    const payload = {
+      type: "grid:update",
+      mysteryId: req.params.id,
+      mode: validation.data.mode,
+      rows: saved.rows,
+      cols: saved.cols,
+      cells: saved.cells
+    };
+    const message = JSON.stringify(payload);
+    wss.clients.forEach((client) => {
+      if (client.readyState === 1) {
+        client.send(message);
+      }
+    });
+    res.json({ rows: saved.rows, cols: saved.cols, cells: saved.cells });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to save grid state." });
+  }
+});
+
 const publicPath = path.join(__dirname, "public");
 app.use(express.static(publicPath));
 
@@ -118,6 +196,6 @@ app.get("*", (req, res) => {
   res.sendFile(path.join(publicPath, "index.html"));
 });
 
-app.listen(port, () => {
+server.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });

@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Mystery {
+  id        String   @id @default(cuid())
+  title     String
+  clues     String
+  suspects  String[]
+  locations String[]
+  weapons   String[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  gridStates GridState[]
+}
+
+model GridState {
+  id        String   @id @default(cuid())
+  mysteryId String
+  mode      String
+  rows      Int
+  cols      Int
+  cells     Json
+  updatedAt DateTime @updatedAt
+
+  mystery Mystery @relation(fields: [mysteryId], references: [id], onDelete: Cascade)
+
+  @@unique([mysteryId, mode])
+}
