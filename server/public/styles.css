@@ -310,13 +310,6 @@ button.danger {
   flex-wrap: wrap;
 }
 
-.grid-select {
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .legend {
   display: flex;
   align-items: center;
@@ -370,6 +363,23 @@ button.danger {
 .grid-table th {
   background: #fff7e8;
   font-weight: 600;
+}
+
+.grid-table th.group {
+  background: #fff0cf;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.75rem;
+}
+
+.grid-table th.divider,
+.grid-table td.divider {
+  border-right: 2px solid rgba(15, 118, 110, 0.35);
+}
+
+.grid-table td.blank {
+  background: #fffaf1;
 }
 
 .grid-cell {

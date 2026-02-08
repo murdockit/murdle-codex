@@ -17,7 +17,6 @@ const detailWeapons = document.getElementById("detail-weapons");
 const editButton = document.getElementById("edit-mystery");
 const deleteButton = document.getElementById("delete-mystery");
 const gridEl = document.getElementById("logic-grid");
-const gridMode = document.getElementById("grid-mode");
 
 const summaryCount = document.getElementById("mystery-count");
 const summaryUpdated = document.getElementById("last-updated");
@@ -28,7 +27,7 @@ const state = {
   detail: null,
   editingId: null,
   gridToken: 0,
-  currentGrid: null,
+  currentGrid: { locations: null, weapons: null, locWeapons: null },
   ws: null,
   wsTimer: null
 };
@@ -197,41 +196,65 @@ function cycleCell(state, row, col) {
   return next;
 }
 
-function applyGridStateToTable(table, gridState) {
-  if (!table || !gridState) return;
-  const cells = table.querySelectorAll("td.grid-cell");
-  cells.forEach((cell) => {
-    const row = Number(cell.dataset.row);
-    const col = Number(cell.dataset.col);
-    const value = gridState.cells[`${row}:${col}`] || "unknown";
-    cell.className = `grid-cell ${value}`;
-    cell.textContent = value === "yes" ? "✔" : value === "no" ? "✕" : "?";
-  });
-}
-
 async function renderGrid() {
   if (!state.detail) return;
-  const mode = gridMode.value;
   const rows = state.detail.suspects;
-  const cols = mode === "locations" ? state.detail.locations : state.detail.weapons;
+  const locations = state.detail.locations;
+  const weapons = state.detail.weapons;
 
   const token = ++state.gridToken;
-  const gridState = await loadGridState(state.detail.id, mode, rows.length, cols.length);
+  const [locationsState, weaponsState, locWeaponsState] = await Promise.all([
+    loadGridState(state.detail.id, "locations", rows.length, locations.length),
+    loadGridState(state.detail.id, "weapons", rows.length, weapons.length),
+    loadGridState(state.detail.id, "loc-weapons", locations.length, weapons.length)
+  ]);
   if (token !== state.gridToken) return;
-  state.currentGrid = { ...gridState, mode, rows: rows.length, cols: cols.length };
+  state.currentGrid = {
+    locations: { ...locationsState, mode: "locations", rows: rows.length, cols: locations.length },
+    weapons: { ...weaponsState, mode: "weapons", rows: rows.length, cols: weapons.length },
+    locWeapons: { ...locWeaponsState, mode: "loc-weapons", rows: locations.length, cols: weapons.length }
+  };
 
   const table = document.createElement("table");
   table.className = "grid-table";
+
+  const groupRow = document.createElement("tr");
+  const groupBlank = document.createElement("th");
+  groupBlank.textContent = "";
+  groupRow.appendChild(groupBlank);
+
+  const locGroup = document.createElement("th");
+  locGroup.className = "group";
+  locGroup.colSpan = Math.max(locations.length, 1);
+  locGroup.textContent = "Locations";
+  groupRow.appendChild(locGroup);
+
+  const wepGroup = document.createElement("th");
+  wepGroup.className = "group";
+  wepGroup.colSpan = Math.max(weapons.length, 1);
+  wepGroup.textContent = "Weapons";
+  groupRow.appendChild(wepGroup);
+
+  table.appendChild(groupRow);
 
   const headRow = document.createElement("tr");
   const blank = document.createElement("th");
   blank.textContent = "";
   headRow.appendChild(blank);
-  cols.forEach((col) => {
+
+  locations.forEach((col, index) => {
+    const th = document.createElement("th");
+    th.textContent = col;
+    if (index === locations.length - 1) th.classList.add("divider");
+    headRow.appendChild(th);
+  });
+
+  weapons.forEach((col) => {
     const th = document.createElement("th");
     th.textContent = col;
     headRow.appendChild(th);
   });
+
   table.appendChild(headRow);
 
   rows.forEach((row, rowIndex) => {
@@ -239,27 +262,93 @@ async function renderGrid() {
     const th = document.createElement("th");
     th.textContent = row;
     tr.appendChild(th);
-    cols.forEach((_, colIndex) => {
+
+    locations.forEach((_, colIndex) => {
       const td = document.createElement("td");
+      td.dataset.mode = "locations";
       td.dataset.row = rowIndex;
       td.dataset.col = colIndex;
       const stateKey = `${rowIndex}:${colIndex}`;
-      const value = state.currentGrid.cells[stateKey] || "unknown";
+      const value = state.currentGrid.locations.cells[stateKey] || "unknown";
       td.className = `grid-cell ${value}`;
+      if (colIndex === locations.length - 1) td.classList.add("divider");
       td.textContent = value === "yes" ? "✔" : value === "no" ? "✕" : "?";
       td.addEventListener("click", () => {
-        const next = cycleCell(state.currentGrid, rowIndex, colIndex);
-        td.className = `grid-cell ${next}`;
+        const next = cycleCell(state.currentGrid.locations, rowIndex, colIndex);
+        td.className = `grid-cell ${next}` + (colIndex === locations.length - 1 ? " divider" : "");
         td.textContent = next === "yes" ? "✔" : next === "no" ? "✕" : "?";
-        saveGridState(state.detail.id, mode, state.currentGrid);
+        saveGridState(state.detail.id, "locations", state.currentGrid.locations);
       });
       tr.appendChild(td);
     });
+
+    weapons.forEach((_, colIndex) => {
+      const td = document.createElement("td");
+      td.dataset.mode = "weapons";
+      td.dataset.row = rowIndex;
+      td.dataset.col = colIndex;
+      const stateKey = `${rowIndex}:${colIndex}`;
+      const value = state.currentGrid.weapons.cells[stateKey] || "unknown";
+      td.className = `grid-cell ${value}`;
+      td.textContent = value === "yes" ? "✔" : value === "no" ? "✕" : "?";
+      td.addEventListener("click", () => {
+        const next = cycleCell(state.currentGrid.weapons, rowIndex, colIndex);
+        td.className = `grid-cell ${next}`;
+        td.textContent = next === "yes" ? "✔" : next === "no" ? "✕" : "?";
+        saveGridState(state.detail.id, "weapons", state.currentGrid.weapons);
+      });
+      tr.appendChild(td);
+    });
+
     table.appendChild(tr);
   });
 
+  if (locations.length > 0 && weapons.length > 0) {
+    const spacer = document.createElement("tr");
+    const spacerTh = document.createElement("th");
+    spacerTh.textContent = "Locations × Weapons";
+    spacerTh.className = "group";
+    spacerTh.colSpan = 1 + locations.length + weapons.length;
+    spacer.appendChild(spacerTh);
+    table.appendChild(spacer);
+
+    locations.forEach((location, rowIndex) => {
+      const tr = document.createElement("tr");
+      const th = document.createElement("th");
+      th.textContent = location;
+      tr.appendChild(th);
+
+      locations.forEach((_, colIndex) => {
+        const td = document.createElement("td");
+        td.className = "blank";
+        if (colIndex === locations.length - 1) td.classList.add("divider");
+        tr.appendChild(td);
+      });
+
+      weapons.forEach((_, colIndex) => {
+        const td = document.createElement("td");
+        td.dataset.mode = "loc-weapons";
+        td.dataset.row = rowIndex;
+        td.dataset.col = colIndex;
+        const stateKey = `${rowIndex}:${colIndex}`;
+        const value = state.currentGrid.locWeapons.cells[stateKey] || "unknown";
+        td.className = `grid-cell ${value}`;
+        td.textContent = value === "yes" ? "✔" : value === "no" ? "✕" : "?";
+        td.addEventListener("click", () => {
+          const next = cycleCell(state.currentGrid.locWeapons, rowIndex, colIndex);
+          td.className = `grid-cell ${next}`;
+          td.textContent = next === "yes" ? "✔" : next === "no" ? "✕" : "?";
+          saveGridState(state.detail.id, "loc-weapons", state.currentGrid.locWeapons);
+        });
+        tr.appendChild(td);
+      });
+
+      table.appendChild(tr);
+    });
+  }
+
   gridEl.innerHTML = "";
-  if (rows.length === 0 || cols.length === 0) {
+  if (rows.length === 0 || (locations.length === 0 && weapons.length === 0)) {
     gridEl.textContent = "Add suspects, locations, and weapons to use the grid.";
     return;
   }
@@ -327,20 +416,51 @@ deleteButton.addEventListener("click", async () => {
   renderDetail();
 });
 
-gridMode.addEventListener("change", renderGrid);
-
 function handleGridUpdate(payload) {
   if (!state.detail) return;
   if (payload.mysteryId !== state.detail.id) return;
-  if (payload.mode !== gridMode.value) return;
-  state.currentGrid = {
-    mode: payload.mode,
-    rows: payload.rows,
-    cols: payload.cols,
-    cells: payload.cells || {}
-  };
+  if (!state.currentGrid) return;
+  if (payload.mode === "locations") {
+    state.currentGrid.locations = {
+      mode: "locations",
+      rows: payload.rows,
+      cols: payload.cols,
+      cells: payload.cells || {}
+    };
+  } else if (payload.mode === "weapons") {
+    state.currentGrid.weapons = {
+      mode: "weapons",
+      rows: payload.rows,
+      cols: payload.cols,
+      cells: payload.cells || {}
+    };
+  } else if (payload.mode === "loc-weapons") {
+    state.currentGrid.locWeapons = {
+      mode: "loc-weapons",
+      rows: payload.rows,
+      cols: payload.cols,
+      cells: payload.cells || {}
+    };
+  } else {
+    return;
+  }
+
   const table = gridEl.querySelector("table");
-  applyGridStateToTable(table, state.currentGrid);
+  if (!table) return;
+  const subset =
+    payload.mode === "locations"
+      ? state.currentGrid.locations
+      : payload.mode === "weapons"
+      ? state.currentGrid.weapons
+      : state.currentGrid.locWeapons;
+  const cells = table.querySelectorAll(`td.grid-cell[data-mode="${payload.mode}"]`);
+  cells.forEach((cell) => {
+    const row = Number(cell.dataset.row);
+    const col = Number(cell.dataset.col);
+    const value = subset.cells[`${row}:${col}`] || "unknown";
+    cell.className = `grid-cell ${value}` + (payload.mode === "locations" && col === subset.cols - 1 ? " divider" : "");
+    cell.textContent = value === "yes" ? "✔" : value === "no" ? "✕" : "?";
+  });
 }
 
 function connectWebSocket() {
