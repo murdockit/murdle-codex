@@ -15,14 +15,17 @@ model Mystery {
   suspects  String[]
   locations String[]
   weapons   String[]
+  motives   String[] @default([])
   suspectsMeta  Json @default("[]")
   locationsMeta Json @default("[]")
   weaponsMeta   Json @default("[]")
+  motivesMeta   Json @default("[]")
   tags      String[]
   solutionTbd      Boolean @default(false)
   solutionSuspect  String?
   solutionLocation String?
   solutionWeapon   String?
+  solvedAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

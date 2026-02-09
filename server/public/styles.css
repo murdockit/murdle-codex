@@ -344,6 +344,10 @@ button.danger {
   margin-bottom: 12px;
 }
 
+.motives-block {
+  margin-top: 8px;
+}
+
 .solution-toggle input {
   width: 18px;
   height: 18px;
@@ -388,6 +392,13 @@ button.danger {
   background: #ffe3cc;
   color: #8b3b17;
   border-color: rgba(139, 59, 23, 0.2);
+  font-weight: 700;
+}
+
+.tag-chip.solved {
+  background: #d1f5e0;
+  color: #0b4f49;
+  border-color: rgba(11, 79, 73, 0.2);
   font-weight: 700;
 }
 
@@ -674,6 +685,10 @@ button.danger {
 
 .token.weapon {
   background: #d6f3ff;
+}
+
+.token.motive {
+  background: #ffe3cc;
 }
 
 .token-label {

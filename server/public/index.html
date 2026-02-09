@@ -94,6 +94,30 @@
               ></textarea>
             </label>
           </div>
+          <label class="solution-toggle">
+            <input id="include-motives" type="checkbox" />
+            Include Motives
+          </label>
+          <div id="motives-block" class="triple hidden">
+            <label>
+              Motives
+              <textarea
+                id="motives"
+                name="motives"
+                placeholder="One per line"
+                rows="4"
+              ></textarea>
+            </label>
+            <label>
+              Motive Descriptions
+              <textarea
+                id="motive-descriptions"
+                name="motive-descriptions"
+                placeholder="One per line (matches motives)"
+                rows="4"
+              ></textarea>
+            </label>
+          </div>
           <div class="triple">
             <label>
               Suspect Descriptions
@@ -123,8 +147,17 @@
               ></textarea>
             </label>
           </div>
+          <label>
+            Suspect Qualifiers
+            <textarea
+              id="suspect-qualifiers"
+              name="suspect-qualifiers"
+              placeholder="One per line (e.g., height=6'0, hand=left, hair=black, eyes=green)"
+              rows="4"
+            ></textarea>
+          </label>
           <div id="description-warning" class="form-warning hidden">
-            Descriptions should match the number of names in each list.
+            Descriptions and qualifiers should match the number of names in each list.
           </div>
           <div class="solution-block">
             <h3>Solution</h3>
@@ -178,9 +211,11 @@
             <div class="detail-actions">
               <button id="edit-mystery" class="ghost">Edit</button>
               <button id="clone-mystery" class="ghost">Clone</button>
+              <button id="solve-mystery" class="ghost">Mark Solved</button>
               <button id="delete-mystery" class="danger">Delete</button>
             </div>
           </div>
+          <div id="detail-solved" class="tag-row"></div>
           <div id="detail-tags" class="tag-row"></div>
           <p id="detail-clues" class="detail-clues"></p>
           <div class="checklist-block">
@@ -199,6 +234,10 @@
             <div>
               <h4>Weapons</h4>
               <ul id="detail-weapons"></ul>
+            </div>
+            <div id="detail-motives-block" class="hidden">
+              <h4>Motives</h4>
+              <ul id="detail-motives"></ul>
             </div>
           </div>
           <div class="solution-display">

@@ -26,12 +26,14 @@ function normalizeMeta(names, meta) {
     if (!item || typeof item.name !== "string") return;
     map.set(item.name.trim(), {
       name: item.name.trim(),
-      description: typeof item.description === "string" ? item.description.trim() : ""
+      description: typeof item.description === "string" ? item.description.trim() : "",
+      qualifiers: typeof item.qualifiers === "string" ? item.qualifiers.trim() : ""
     });
   });
   return names.map((name) => ({
     name,
-    description: map.get(name)?.description || ""
+    description: map.get(name)?.description || "",
+    qualifiers: map.get(name)?.qualifiers || ""
   }));
 }
 
@@ -41,9 +43,11 @@ function validatePayload(body) {
   const suspects = sanitizeList(body.suspects);
   const locations = sanitizeList(body.locations);
   const weapons = sanitizeList(body.weapons);
+  const motives = sanitizeList(body.motives);
   const suspectsMeta = normalizeMeta(suspects, body.suspectsMeta);
   const locationsMeta = normalizeMeta(locations, body.locationsMeta);
   const weaponsMeta = normalizeMeta(weapons, body.weaponsMeta);
+  const motivesMeta = normalizeMeta(motives, body.motivesMeta);
   const tags = sanitizeList(body.tags);
   const solutionTbd = Boolean(body.solutionTbd);
   const solutionSuspect =
@@ -59,6 +63,9 @@ function validatePayload(body) {
   if (suspects.length === 0) errors.push("At least one suspect is required.");
   if (locations.length === 0) errors.push("At least one location is required.");
   if (weapons.length === 0) errors.push("At least one weapon is required.");
+  if (Boolean(body.includeMotives) && motives.length === 0) {
+    errors.push("At least one motive is required.");
+  }
   if (!solutionTbd && solutionSuspect && !suspects.includes(solutionSuspect)) {
     errors.push("Solution suspect must match a suspect.");
   }
@@ -78,9 +85,11 @@ function validatePayload(body) {
       suspects,
       locations,
       weapons,
+      motives,
       suspectsMeta,
       locationsMeta,
       weaponsMeta,
+      motivesMeta,
       tags,
       solutionTbd,
       solutionSuspect: solutionTbd ? null : solutionSuspect,
@@ -116,12 +125,18 @@ function validateDraftPayload(body) {
   const suspects = typeof data.suspects === "string" ? data.suspects : "";
   const locations = typeof data.locations === "string" ? data.locations : "";
   const weapons = typeof data.weapons === "string" ? data.weapons : "";
+  const motives = typeof data.motives === "string" ? data.motives : "";
   const suspectDescriptions =
     typeof data.suspectDescriptions === "string" ? data.suspectDescriptions : "";
   const locationDescriptions =
     typeof data.locationDescriptions === "string" ? data.locationDescriptions : "";
   const weaponDescriptions =
     typeof data.weaponDescriptions === "string" ? data.weaponDescriptions : "";
+  const suspectQualifiers =
+    typeof data.suspectQualifiers === "string" ? data.suspectQualifiers : "";
+  const includeMotives = Boolean(data.includeMotives);
+  const motiveDescriptions =
+    typeof data.motiveDescriptions === "string" ? data.motiveDescriptions : "";
   const tags = typeof data.tags === "string" ? data.tags : "";
   const solutionTbd = Boolean(data.solutionTbd);
   const solutionSuspect =
@@ -139,9 +154,13 @@ function validateDraftPayload(body) {
       suspects,
       locations,
       weapons,
+      motives,
       suspectDescriptions,
       locationDescriptions,
       weaponDescriptions,
+      suspectQualifiers,
+      includeMotives,
+      motiveDescriptions,
       tags,
       solutionTbd,
       solutionSuspect,
@@ -172,8 +191,10 @@ app.get("/api/mysteries", async (req, res) => {
         suspects: true,
         locations: true,
         weapons: true,
+        motives: true,
         tags: true,
-        solutionTbd: true
+        solutionTbd: true,
+        solvedAt: true
       }
     });
 
@@ -185,8 +206,10 @@ app.get("/api/mysteries", async (req, res) => {
         suspectCount: Array.isArray(item.suspects) ? item.suspects.length : 0,
         locationCount: Array.isArray(item.locations) ? item.locations.length : 0,
         weaponCount: Array.isArray(item.weapons) ? item.weapons.length : 0,
+        motiveCount: Array.isArray(item.motives) ? item.motives.length : 0,
         tags: item.tags || [],
-        solutionTbd: Boolean(item.solutionTbd)
+        solutionTbd: Boolean(item.solutionTbd),
+        solvedAt: item.solvedAt
       }))
     );
   } catch (err) {
@@ -238,6 +261,18 @@ app.delete("/api/mysteries/:id", async (req, res) => {
     res.status(204).send();
   } catch (err) {
     res.status(500).json({ error: "Failed to delete mystery." });
+  }
+});
+
+app.post("/api/mysteries/:id/solved", async (req, res) => {
+  try {
+    const updated = await prisma.mystery.update({
+      where: { id: req.params.id },
+      data: { solvedAt: new Date() }
+    });
+    res.json({ solvedAt: updated.solvedAt });
+  } catch (err) {
+    res.status(500).json({ error: "Failed to mark solved." });
   }
 });
 

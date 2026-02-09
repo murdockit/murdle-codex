@@ -12,6 +12,11 @@ const solutionTbd = document.getElementById("solution-tbd");
 const suspectDescriptions = document.getElementById("suspect-descriptions");
 const locationDescriptions = document.getElementById("location-descriptions");
 const weaponDescriptions = document.getElementById("weapon-descriptions");
+const suspectQualifiers = document.getElementById("suspect-qualifiers");
+const includeMotives = document.getElementById("include-motives");
+const motivesBlock = document.getElementById("motives-block");
+const motivesField = document.getElementById("motives");
+const motiveDescriptions = document.getElementById("motive-descriptions");
 const descriptionWarning = document.getElementById("description-warning");
 
 const listEl = document.getElementById("mystery-list");
@@ -25,9 +30,13 @@ const checklistEl = document.getElementById("clue-checklist");
 const detailSuspects = document.getElementById("detail-suspects");
 const detailLocations = document.getElementById("detail-locations");
 const detailWeapons = document.getElementById("detail-weapons");
+const detailMotives = document.getElementById("detail-motives");
+const detailMotivesBlock = document.getElementById("detail-motives-block");
 const detailSolution = document.getElementById("detail-solution");
+const detailSolved = document.getElementById("detail-solved");
 const editButton = document.getElementById("edit-mystery");
 const cloneButton = document.getElementById("clone-mystery");
+const solveButton = document.getElementById("solve-mystery");
 const deleteButton = document.getElementById("delete-mystery");
 const gridEl = document.getElementById("logic-grid");
 const gridToolbar = document.querySelector(".grid-toolbar");
@@ -46,7 +55,10 @@ const state = {
   currentGrid: {
     weaponsSuspects: null,
     weaponsLocations: null,
-    locationsSuspects: null
+    locationsSuspects: null,
+    motivesSuspects: null,
+    motivesLocations: null,
+    motivesWeapons: null
   },
   ws: null,
   wsTimer: null,
@@ -89,14 +101,18 @@ function parseEntries(value) {
   return { names, meta };
 }
 
-function buildMetaFromLists(namesValue, descriptionsValue) {
+function buildMetaFromLists(namesValue, descriptionsValue, qualifiersValue) {
   const names = splitLines(namesValue);
   const descriptions = descriptionsValue
     .split(/\n+/)
     .map((item) => item.trim());
+  const qualifiers = qualifiersValue
+    ? qualifiersValue.split(/\n+/).map((item) => item.trim())
+    : [];
   const meta = names.map((name, index) => ({
     name,
-    description: descriptions[index] || ""
+    description: descriptions[index] || "",
+    qualifiers: qualifiers[index] || ""
   }));
   return { names, meta };
 }
@@ -106,15 +122,25 @@ function validateDescriptions() {
   const suspects = splitLines(document.getElementById("suspects").value);
   const locations = splitLines(document.getElementById("locations").value);
   const weapons = splitLines(document.getElementById("weapons").value);
+  const motives = splitLines(motivesField.value);
   const suspectDescs = suspectDescriptions.value.split(/\n+/).filter((line) => line.trim().length);
+  const suspectQuals = suspectQualifiers.value.split(/\n+/).filter((line) => line.trim().length);
   const locationDescs = locationDescriptions.value
     .split(/\n+/)
     .filter((line) => line.trim().length);
   const weaponDescs = weaponDescriptions.value.split(/\n+/).filter((line) => line.trim().length);
+  const motiveDescs = motiveDescriptions.value
+    .split(/\n+/)
+    .filter((line) => line.trim().length);
   const mismatch =
     (suspects.length > 0 && suspectDescs.length > 0 && suspectDescs.length !== suspects.length) ||
+    (suspects.length > 0 && suspectQuals.length > 0 && suspectQuals.length !== suspects.length) ||
     (locations.length > 0 && locationDescs.length > 0 && locationDescs.length !== locations.length) ||
-    (weapons.length > 0 && weaponDescs.length > 0 && weaponDescs.length !== weapons.length);
+    (weapons.length > 0 && weaponDescs.length > 0 && weaponDescs.length !== weapons.length) ||
+    (includeMotives.checked &&
+      motives.length > 0 &&
+      motiveDescs.length > 0 &&
+      motiveDescs.length !== motives.length);
   descriptionWarning.classList.toggle("hidden", !mismatch);
   return !mismatch;
 }
@@ -156,6 +182,11 @@ function syncSolutionSelectors(detail) {
   buildSelectOptions(solutionSuspect, suspects, detail?.solutionSuspect || solutionSuspect.value);
   buildSelectOptions(solutionLocation, locations, detail?.solutionLocation || solutionLocation.value);
   buildSelectOptions(solutionWeapon, weapons, detail?.solutionWeapon || solutionWeapon.value);
+}
+
+function updateMotivesUI() {
+  if (!includeMotives || !motivesBlock) return;
+  motivesBlock.classList.toggle("hidden", !includeMotives.checked);
 }
 
 function updateSolutionTbdUI() {
@@ -240,6 +271,10 @@ function collectDraftData() {
     suspectDescriptions: suspectDescriptions.value,
     locationDescriptions: locationDescriptions.value,
     weaponDescriptions: weaponDescriptions.value,
+    suspectQualifiers: suspectQualifiers.value,
+    includeMotives: includeMotives.checked,
+    motives: motivesField.value,
+    motiveDescriptions: motiveDescriptions.value,
     tags: document.getElementById("tags").value,
     solutionTbd: solutionTbd.checked,
     solutionSuspect: solutionSuspect.value,
@@ -258,6 +293,10 @@ function applyDraft(draft) {
   suspectDescriptions.value = draft.suspectDescriptions || "";
   locationDescriptions.value = draft.locationDescriptions || "";
   weaponDescriptions.value = draft.weaponDescriptions || "";
+  suspectQualifiers.value = draft.suspectQualifiers || "";
+  includeMotives.checked = Boolean(draft.includeMotives);
+  motivesField.value = draft.motives || "";
+  motiveDescriptions.value = draft.motiveDescriptions || "";
   document.getElementById("tags").value = draft.tags || "";
   solutionTbd.checked = Boolean(draft.solutionTbd);
   syncSolutionSelectors({
@@ -265,6 +304,7 @@ function applyDraft(draft) {
     solutionLocation: draft.solutionLocation || "",
     solutionWeapon: draft.solutionWeapon || ""
   });
+  updateMotivesUI();
   updateSolutionTbdUI();
   if (draft.savedAt) {
     setDraftStatus(`Draft saved ${formatDate(draft.savedAt)}`, true);
@@ -428,6 +468,11 @@ function renderEntityList(container, meta, fallback) {
       desc.textContent = item.description;
       li.appendChild(desc);
     }
+    if (item.qualifiers) {
+      const qual = document.createElement("small");
+      qual.textContent = item.qualifiers;
+      li.appendChild(qual);
+    }
     container.appendChild(li);
   });
 }
@@ -492,7 +537,8 @@ function renderList() {
 
     const meta = document.createElement("div");
     meta.className = "card-meta";
-    meta.textContent = `${item.suspectCount} suspects · ${item.locationCount} locations · ${item.weaponCount} weapons`;
+    const motiveText = item.motiveCount ? ` · ${item.motiveCount} motives` : "";
+    meta.textContent = `${item.suspectCount} suspects · ${item.locationCount} locations · ${item.weaponCount} weapons${motiveText}`;
 
     const time = document.createElement("div");
     time.className = "card-meta";
@@ -557,15 +603,21 @@ function populateForm(detail) {
   const suspectsMeta = Array.isArray(detail.suspectsMeta) ? detail.suspectsMeta : [];
   const locationsMeta = Array.isArray(detail.locationsMeta) ? detail.locationsMeta : [];
   const weaponsMeta = Array.isArray(detail.weaponsMeta) ? detail.weaponsMeta : [];
+  const motivesMeta = Array.isArray(detail.motivesMeta) ? detail.motivesMeta : [];
   document.getElementById("suspects").value = suspectsMeta.map((item) => item.name).join("\n");
   document.getElementById("locations").value = locationsMeta.map((item) => item.name).join("\n");
   document.getElementById("weapons").value = weaponsMeta.map((item) => item.name).join("\n");
   suspectDescriptions.value = suspectsMeta.map((item) => item.description || "").join("\n");
   locationDescriptions.value = locationsMeta.map((item) => item.description || "").join("\n");
   weaponDescriptions.value = weaponsMeta.map((item) => item.description || "").join("\n");
+  suspectQualifiers.value = suspectsMeta.map((item) => item.qualifiers || "").join("\n");
+  includeMotives.checked = Array.isArray(detail.motives) && detail.motives.length > 0;
+  motivesField.value = (detail.motives || []).join("\n");
+  motiveDescriptions.value = motivesMeta.map((item) => item.description || "").join("\n");
   document.getElementById("tags").value = (detail.tags || []).join(", ");
   solutionTbd.checked = Boolean(detail.solutionTbd);
   syncSolutionSelectors(detail);
+  updateMotivesUI();
   updateSolutionTbdUI();
   formTitle.textContent = "Edit Mystery";
   saveButton.textContent = "Update Mystery";
@@ -586,6 +638,13 @@ function renderDetail() {
 
   detailTitle.textContent = state.detail.title;
   detailClues.textContent = state.detail.clues;
+  detailSolved.innerHTML = "";
+  if (state.detail.solvedAt) {
+    const chip = document.createElement("div");
+    chip.className = "tag-chip solved";
+    chip.textContent = `Solved ${formatDate(state.detail.solvedAt)}`;
+    detailSolved.appendChild(chip);
+  }
   detailTags.innerHTML = "";
   if (state.detail.solutionTbd) {
     const badge = document.createElement("div");
@@ -604,6 +663,13 @@ function renderDetail() {
   renderEntityList(detailSuspects, state.detail.suspectsMeta, state.detail.suspects);
   renderEntityList(detailLocations, state.detail.locationsMeta, state.detail.locations);
   renderEntityList(detailWeapons, state.detail.weaponsMeta, state.detail.weapons);
+  if (Array.isArray(state.detail.motives) && state.detail.motives.length > 0) {
+    detailMotivesBlock.classList.remove("hidden");
+    renderEntityList(detailMotives, state.detail.motivesMeta, state.detail.motives);
+  } else {
+    detailMotivesBlock.classList.add("hidden");
+    detailMotives.innerHTML = "";
+  }
   detailSolution.innerHTML = "";
   if (state.detail.solutionTbd) {
     const chip = document.createElement("div");
@@ -653,9 +719,11 @@ async function cloneMystery(id) {
     suspects: data.suspects,
     locations: data.locations,
     weapons: data.weapons,
+    motives: data.motives || [],
     suspectsMeta: data.suspectsMeta || [],
     locationsMeta: data.locationsMeta || [],
     weaponsMeta: data.weaponsMeta || [],
+    motivesMeta: data.motivesMeta || [],
     tags: data.tags || [],
     solutionTbd: data.solutionTbd,
     solutionSuspect: data.solutionSuspect,
@@ -728,25 +796,34 @@ function scheduleGridSave() {
           ? state.currentGrid.weaponsSuspects
           : mode === "weapons-locations"
           ? state.currentGrid.weaponsLocations
-          : state.currentGrid.locationsSuspects;
+          : mode === "locations-suspects"
+          ? state.currentGrid.locationsSuspects
+          : mode === "motives-suspects"
+          ? state.currentGrid.motivesSuspects
+          : mode === "motives-locations"
+          ? state.currentGrid.motivesLocations
+          : state.currentGrid.motivesWeapons;
       saveGridState(state.detail.id, mode, gridState);
     });
     state.pendingSaves.clear();
   }, 200);
 }
 
-function applyToolToCell(cell, rowIndex, colIndex, mode) {
+function applyCycleToCell(cell, rowIndex, colIndex, mode) {
   if (!state.detail || !state.currentGrid) return;
   const gridState =
     mode === "weapons-suspects"
       ? state.currentGrid.weaponsSuspects
       : mode === "weapons-locations"
       ? state.currentGrid.weaponsLocations
-      : state.currentGrid.locationsSuspects;
-  const nextValue = toolToValue(state.dragValue);
-  const stateKey = `${rowIndex}:${colIndex}`;
-  if (gridState.cells[stateKey] === nextValue) return;
-  gridState.cells[stateKey] = nextValue;
+      : mode === "locations-suspects"
+      ? state.currentGrid.locationsSuspects
+      : mode === "motives-suspects"
+      ? state.currentGrid.motivesSuspects
+      : mode === "motives-locations"
+      ? state.currentGrid.motivesLocations
+      : state.currentGrid.motivesWeapons;
+  const nextValue = cycleCell(gridState, rowIndex, colIndex);
   cell.className = `grid-cell ${nextValue}` + (mode === "weapons-suspects" && colIndex === gridState.cols - 1 ? " divider" : "");
   cell.textContent = nextValue === "yes" ? "✔" : nextValue === "no" ? "✕" : "?";
   state.pendingSaves.add(mode);
@@ -758,12 +835,16 @@ async function renderGrid() {
   const suspects = state.detail.suspects;
   const locations = state.detail.locations;
   const weapons = state.detail.weapons;
+  const motives = state.detail.motives || [];
 
   const token = ++state.gridToken;
-  const [weaponsSuspectsState, weaponsLocationsState, locationsSuspectsState] = await Promise.all([
+  const [weaponsSuspectsState, weaponsLocationsState, locationsSuspectsState, motivesSuspectsState, motivesLocationsState, motivesWeaponsState] = await Promise.all([
     loadGridState(state.detail.id, "weapons-suspects", weapons.length, suspects.length),
     loadGridState(state.detail.id, "weapons-locations", weapons.length, locations.length),
-    loadGridState(state.detail.id, "locations-suspects", locations.length, suspects.length)
+    loadGridState(state.detail.id, "locations-suspects", locations.length, suspects.length),
+    loadGridState(state.detail.id, "motives-suspects", motives.length, suspects.length),
+    loadGridState(state.detail.id, "motives-locations", motives.length, locations.length),
+    loadGridState(state.detail.id, "motives-weapons", motives.length, weapons.length)
   ]);
   if (token !== state.gridToken) return;
   state.currentGrid = {
@@ -784,6 +865,24 @@ async function renderGrid() {
       mode: "locations-suspects",
       rows: locations.length,
       cols: suspects.length
+    },
+    motivesSuspects: {
+      ...motivesSuspectsState,
+      mode: "motives-suspects",
+      rows: motives.length,
+      cols: suspects.length
+    },
+    motivesLocations: {
+      ...motivesLocationsState,
+      mode: "motives-locations",
+      rows: motives.length,
+      cols: locations.length
+    },
+    motivesWeapons: {
+      ...motivesWeaponsState,
+      mode: "motives-weapons",
+      rows: motives.length,
+      cols: weapons.length
     }
   };
 
@@ -808,6 +907,7 @@ async function renderGrid() {
   wepGroup.colSpan = Math.max(locations.length, 1);
   wepGroup.textContent = "Locations";
   groupRow.appendChild(wepGroup);
+
 
   table.appendChild(groupRow);
 
@@ -851,15 +951,8 @@ async function renderGrid() {
       td.className = `grid-cell ${value}`;
       if (colIndex === suspects.length - 1) td.classList.add("divider");
       td.textContent = value === "yes" ? "✔" : value === "no" ? "✕" : "?";
-      td.addEventListener("pointerdown", (event) => {
-        event.preventDefault();
-        state.isDragging = true;
-        state.dragValue = state.activeTool;
-        applyToolToCell(td, rowIndex, colIndex, "weapons-suspects");
-      });
-      td.addEventListener("pointerenter", () => {
-        if (!state.isDragging) return;
-        applyToolToCell(td, rowIndex, colIndex, "weapons-suspects");
+      td.addEventListener("click", () => {
+        applyCycleToCell(td, rowIndex, colIndex, "weapons-suspects");
       });
       tr.appendChild(td);
     });
@@ -873,18 +966,12 @@ async function renderGrid() {
       const value = state.currentGrid.weaponsLocations.cells[stateKey] || "unknown";
       td.className = `grid-cell ${value}`;
       td.textContent = value === "yes" ? "✔" : value === "no" ? "✕" : "?";
-      td.addEventListener("pointerdown", (event) => {
-        event.preventDefault();
-        state.isDragging = true;
-        state.dragValue = state.activeTool;
-        applyToolToCell(td, rowIndex, colIndex, "weapons-locations");
-      });
-      td.addEventListener("pointerenter", () => {
-        if (!state.isDragging) return;
-        applyToolToCell(td, rowIndex, colIndex, "weapons-locations");
+      td.addEventListener("click", () => {
+        applyCycleToCell(td, rowIndex, colIndex, "weapons-locations");
       });
       tr.appendChild(td);
     });
+
 
     table.appendChild(tr);
   });
@@ -914,15 +1001,8 @@ async function renderGrid() {
         const value = state.currentGrid.locationsSuspects.cells[stateKey] || "unknown";
         td.className = `grid-cell ${value}`;
         td.textContent = value === "yes" ? "✔" : value === "no" ? "✕" : "?";
-        td.addEventListener("pointerdown", (event) => {
-          event.preventDefault();
-          state.isDragging = true;
-          state.dragValue = state.activeTool;
-          applyToolToCell(td, rowIndex, colIndex, "locations-suspects");
-        });
-        td.addEventListener("pointerenter", () => {
-          if (!state.isDragging) return;
-          applyToolToCell(td, rowIndex, colIndex, "locations-suspects");
+        td.addEventListener("click", () => {
+          applyCycleToCell(td, rowIndex, colIndex, "locations-suspects");
         });
         tr.appendChild(td);
       });
@@ -956,7 +1036,8 @@ form.addEventListener("submit", async (event) => {
   validateDescriptions();
   const suspectsParsed = buildMetaFromLists(
     document.getElementById("suspects").value,
-    suspectDescriptions.value
+    suspectDescriptions.value,
+    suspectQualifiers.value
   );
   const locationsParsed = buildMetaFromLists(
     document.getElementById("locations").value,
@@ -966,16 +1047,23 @@ form.addEventListener("submit", async (event) => {
     document.getElementById("weapons").value,
     weaponDescriptions.value
   );
+  const motivesParsed = buildMetaFromLists(
+    motivesField.value,
+    motiveDescriptions.value
+  );
   const payload = {
     title: document.getElementById("title").value.trim(),
     clues: document.getElementById("clues").value.trim(),
     suspects: suspectsParsed.names,
     locations: locationsParsed.names,
     weapons: weaponsParsed.names,
+    motives: includeMotives.checked ? motivesParsed.names : [],
     suspectsMeta: suspectsParsed.meta,
     locationsMeta: locationsParsed.meta,
     weaponsMeta: weaponsParsed.meta,
+    motivesMeta: includeMotives.checked ? motivesParsed.meta : [],
     tags: splitLines(document.getElementById("tags").value),
+    includeMotives: includeMotives.checked,
     solutionTbd: solutionTbd.checked,
     solutionSuspect: solutionSuspect.value,
     solutionLocation: solutionLocation.value,
@@ -1028,6 +1116,18 @@ cloneButton.addEventListener("click", () => {
   cloneMystery(state.detail.id);
 });
 
+solveButton.addEventListener("click", async () => {
+  if (!state.detail) return;
+  const res = await fetch(`/api/mysteries/${state.detail.id}/solved`, { method: "POST" });
+  if (!res.ok) {
+    alert("Failed to mark solved.");
+    return;
+  }
+  const data = await res.json();
+  state.detail.solvedAt = data.solvedAt;
+  renderDetail();
+});
+
 deleteButton.addEventListener("click", async () => {
   if (!state.detail) return;
   if (!confirm("Delete this mystery? This cannot be undone.")) return;
@@ -1067,6 +1167,27 @@ function handleGridUpdate(payload) {
       cols: payload.cols,
       cells: payload.cells || {}
     };
+  } else if (payload.mode === "motives-suspects") {
+    state.currentGrid.motivesSuspects = {
+      mode: "motives-suspects",
+      rows: payload.rows,
+      cols: payload.cols,
+      cells: payload.cells || {}
+    };
+  } else if (payload.mode === "motives-locations") {
+    state.currentGrid.motivesLocations = {
+      mode: "motives-locations",
+      rows: payload.rows,
+      cols: payload.cols,
+      cells: payload.cells || {}
+    };
+  } else if (payload.mode === "motives-weapons") {
+    state.currentGrid.motivesWeapons = {
+      mode: "motives-weapons",
+      rows: payload.rows,
+      cols: payload.cols,
+      cells: payload.cells || {}
+    };
   } else {
     return;
   }
@@ -1078,7 +1199,13 @@ function handleGridUpdate(payload) {
       ? state.currentGrid.weaponsSuspects
       : payload.mode === "weapons-locations"
       ? state.currentGrid.weaponsLocations
-      : state.currentGrid.locationsSuspects;
+      : payload.mode === "locations-suspects"
+      ? state.currentGrid.locationsSuspects
+      : payload.mode === "motives-suspects"
+      ? state.currentGrid.motivesSuspects
+      : payload.mode === "motives-locations"
+      ? state.currentGrid.motivesLocations
+      : state.currentGrid.motivesWeapons;
   const cells = table.querySelectorAll(`td.grid-cell[data-mode="${payload.mode}"]`);
   cells.forEach((cell) => {
     const row = Number(cell.dataset.row);
@@ -1125,6 +1252,7 @@ async function init() {
     listEl.textContent = "Failed to load case files.";
   }
   syncSolutionSelectors(null);
+  updateMotivesUI();
   connectWebSocket();
   updateToolbarActive();
   const draft = getDraft();
@@ -1149,7 +1277,7 @@ init();
   select.addEventListener("change", scheduleDraftSave);
 });
 
-[suspectDescriptions, locationDescriptions, weaponDescriptions].forEach((field) => {
+[suspectDescriptions, locationDescriptions, weaponDescriptions, suspectQualifiers, motiveDescriptions, motivesField].forEach((field) => {
   field.addEventListener("input", () => {
     scheduleDraftSave();
     validateDescriptions();
@@ -1158,6 +1286,112 @@ init();
 
 ["suspects", "locations", "weapons"].forEach((id) => {
   document.getElementById(id).addEventListener("input", validateDescriptions);
+});
+
+includeMotives.addEventListener("change", () => {
+  updateMotivesUI();
+  if (!includeMotives.checked) {
+    motivesField.value = "";
+    motiveDescriptions.value = "";
+  }
+
+  if (motives.length > 0) {
+    const spacer = document.createElement("tr");
+    const spacerTh = document.createElement("th");
+    spacerTh.textContent = "Motives × Suspects / Locations / Weapons";
+    spacerTh.className = "group";
+    spacerTh.colSpan = 1 + suspects.length + locations.length + weapons.length;
+    spacer.appendChild(spacerTh);
+    table.appendChild(spacer);
+
+    const header = document.createElement("tr");
+    const blankHeader = document.createElement("th");
+    blankHeader.classList.add("sticky-left");
+    blankHeader.textContent = "";
+    header.appendChild(blankHeader);
+
+    suspects.forEach((col, index) => {
+      const th = document.createElement("th");
+      th.className = "header-token";
+      th.appendChild(makeToken(col, "suspect"));
+      if (index === suspects.length - 1) th.classList.add("divider");
+      header.appendChild(th);
+    });
+
+    locations.forEach((col, index) => {
+      const th = document.createElement("th");
+      th.className = "header-token";
+      th.appendChild(makeToken(col, "location"));
+      if (index === locations.length - 1) th.classList.add("divider");
+      header.appendChild(th);
+    });
+
+    weapons.forEach((col) => {
+      const th = document.createElement("th");
+      th.className = "header-token";
+      th.appendChild(makeToken(col, "weapon"));
+      header.appendChild(th);
+    });
+
+    table.appendChild(header);
+
+    motives.forEach((row, rowIndex) => {
+      const tr = document.createElement("tr");
+      const th = document.createElement("th");
+      th.className = "header-token sticky-left";
+      th.appendChild(makeToken(row, "motive"));
+      tr.appendChild(th);
+
+      suspects.forEach((_, colIndex) => {
+        const td = document.createElement("td");
+        td.dataset.mode = "motives-suspects";
+        td.dataset.row = rowIndex;
+        td.dataset.col = colIndex;
+        const stateKey = `${rowIndex}:${colIndex}`;
+        const value = state.currentGrid.motivesSuspects.cells[stateKey] || "unknown";
+        td.className = `grid-cell ${value}`;
+        td.textContent = value === "yes" ? "✔" : value === "no" ? "✕" : "?";
+        td.addEventListener("click", () => {
+          applyCycleToCell(td, rowIndex, colIndex, "motives-suspects");
+        });
+        tr.appendChild(td);
+      });
+
+      locations.forEach((_, colIndex) => {
+        const td = document.createElement("td");
+        td.dataset.mode = "motives-locations";
+        td.dataset.row = rowIndex;
+        td.dataset.col = colIndex;
+        const stateKey = `${rowIndex}:${colIndex}`;
+        const value = state.currentGrid.motivesLocations.cells[stateKey] || "unknown";
+        td.className = `grid-cell ${value}`;
+        td.textContent = value === "yes" ? "✔" : value === "no" ? "✕" : "?";
+        td.addEventListener("click", () => {
+          applyCycleToCell(td, rowIndex, colIndex, "motives-locations");
+        });
+        tr.appendChild(td);
+      });
+
+      weapons.forEach((_, colIndex) => {
+        const td = document.createElement("td");
+        td.dataset.mode = "motives-weapons";
+        td.dataset.row = rowIndex;
+        td.dataset.col = colIndex;
+        const stateKey = `${rowIndex}:${colIndex}`;
+        const value = state.currentGrid.motivesWeapons.cells[stateKey] || "unknown";
+        td.className = `grid-cell ${value}`;
+        td.textContent = value === "yes" ? "✔" : value === "no" ? "✕" : "?";
+        td.addEventListener("click", () => {
+          applyCycleToCell(td, rowIndex, colIndex, "motives-weapons");
+        });
+        tr.appendChild(td);
+      });
+
+      table.appendChild(tr);
+    });
+  }
+  scheduleDraftSave();
+  validateDescriptions();
 });
 
 solutionTbd.addEventListener("change", () => {

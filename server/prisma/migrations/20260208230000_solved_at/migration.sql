@@ -1,0 +1,2 @@
+ALTER TABLE "Mystery"
+ADD COLUMN "solvedAt" TIMESTAMP(3);
