@@ -226,6 +226,16 @@ button.danger {
   color: var(--accent-dark);
 }
 
+.form-warning {
+  color: #8b3b17;
+  background: #ffe9d6;
+  border: 1px solid rgba(139, 59, 23, 0.2);
+  padding: 8px 12px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  margin-top: 8px;
+}
+
 .card-list {
   display: grid;
   gap: 12px;
@@ -304,6 +314,21 @@ button.danger {
 .detail-columns li {
   padding: 6px 0;
   border-bottom: 1px dashed var(--border);
+}
+
+.detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.detail-item span {
+  font-weight: 600;
+}
+
+.detail-item small {
+  color: var(--muted);
+  line-height: 1.4;
 }
 
 .solution-block h3 {

@@ -9,6 +9,10 @@ const solutionSuspect = document.getElementById("solution-suspect");
 const solutionLocation = document.getElementById("solution-location");
 const solutionWeapon = document.getElementById("solution-weapon");
 const solutionTbd = document.getElementById("solution-tbd");
+const suspectDescriptions = document.getElementById("suspect-descriptions");
+const locationDescriptions = document.getElementById("location-descriptions");
+const weaponDescriptions = document.getElementById("weapon-descriptions");
+const descriptionWarning = document.getElementById("description-warning");
 
 const listEl = document.getElementById("mystery-list");
 const detailEmpty = document.getElementById("detail-empty");
@@ -65,6 +69,54 @@ function splitLines(value) {
     .split(/\n|,/)
     .map((item) => item.trim())
     .filter((item) => item.length > 0);
+}
+
+function parseEntries(value) {
+  const lines = value
+    .split(/\n+/)
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+  const meta = [];
+  const names = [];
+  lines.forEach((line) => {
+    const match = line.split(/—|-|:/);
+    const name = match.shift()?.trim() || "";
+    const description = match.join("-").trim();
+    if (!name) return;
+    names.push(name);
+    meta.push({ name, description });
+  });
+  return { names, meta };
+}
+
+function buildMetaFromLists(namesValue, descriptionsValue) {
+  const names = splitLines(namesValue);
+  const descriptions = descriptionsValue
+    .split(/\n+/)
+    .map((item) => item.trim());
+  const meta = names.map((name, index) => ({
+    name,
+    description: descriptions[index] || ""
+  }));
+  return { names, meta };
+}
+
+function validateDescriptions() {
+  if (!descriptionWarning) return true;
+  const suspects = splitLines(document.getElementById("suspects").value);
+  const locations = splitLines(document.getElementById("locations").value);
+  const weapons = splitLines(document.getElementById("weapons").value);
+  const suspectDescs = suspectDescriptions.value.split(/\n+/).filter((line) => line.trim().length);
+  const locationDescs = locationDescriptions.value
+    .split(/\n+/)
+    .filter((line) => line.trim().length);
+  const weaponDescs = weaponDescriptions.value.split(/\n+/).filter((line) => line.trim().length);
+  const mismatch =
+    (suspects.length > 0 && suspectDescs.length > 0 && suspectDescs.length !== suspects.length) ||
+    (locations.length > 0 && locationDescs.length > 0 && locationDescs.length !== locations.length) ||
+    (weapons.length > 0 && weaponDescs.length > 0 && weaponDescs.length !== weapons.length);
+  descriptionWarning.classList.toggle("hidden", !mismatch);
+  return !mismatch;
 }
 
 function splitClues(value) {
@@ -185,6 +237,9 @@ function collectDraftData() {
     suspects: document.getElementById("suspects").value,
     locations: document.getElementById("locations").value,
     weapons: document.getElementById("weapons").value,
+    suspectDescriptions: suspectDescriptions.value,
+    locationDescriptions: locationDescriptions.value,
+    weaponDescriptions: weaponDescriptions.value,
     tags: document.getElementById("tags").value,
     solutionTbd: solutionTbd.checked,
     solutionSuspect: solutionSuspect.value,
@@ -200,6 +255,9 @@ function applyDraft(draft) {
   document.getElementById("suspects").value = draft.suspects || "";
   document.getElementById("locations").value = draft.locations || "";
   document.getElementById("weapons").value = draft.weapons || "";
+  suspectDescriptions.value = draft.suspectDescriptions || "";
+  locationDescriptions.value = draft.locationDescriptions || "";
+  weaponDescriptions.value = draft.weaponDescriptions || "";
   document.getElementById("tags").value = draft.tags || "";
   solutionTbd.checked = Boolean(draft.solutionTbd);
   syncSolutionSelectors({
@@ -354,6 +412,26 @@ function fillList(ul, items) {
   });
 }
 
+function renderEntityList(container, meta, fallback) {
+  container.innerHTML = "";
+  const items = Array.isArray(meta) && meta.length > 0
+    ? meta
+    : (fallback || []).map((name) => ({ name, description: "" }));
+  items.forEach((item) => {
+    const li = document.createElement("li");
+    li.className = "detail-item";
+    const title = document.createElement("span");
+    title.textContent = item.name;
+    li.appendChild(title);
+    if (item.description) {
+      const desc = document.createElement("small");
+      desc.textContent = item.description;
+      li.appendChild(desc);
+    }
+    container.appendChild(li);
+  });
+}
+
 function formatDate(value) {
   if (!value) return "";
   const date = new Date(value);
@@ -476,9 +554,15 @@ function resetForm() {
 function populateForm(detail) {
   document.getElementById("title").value = detail.title;
   document.getElementById("clues").value = detail.clues;
-  document.getElementById("suspects").value = detail.suspects.join("\n");
-  document.getElementById("locations").value = detail.locations.join("\n");
-  document.getElementById("weapons").value = detail.weapons.join("\n");
+  const suspectsMeta = Array.isArray(detail.suspectsMeta) ? detail.suspectsMeta : [];
+  const locationsMeta = Array.isArray(detail.locationsMeta) ? detail.locationsMeta : [];
+  const weaponsMeta = Array.isArray(detail.weaponsMeta) ? detail.weaponsMeta : [];
+  document.getElementById("suspects").value = suspectsMeta.map((item) => item.name).join("\n");
+  document.getElementById("locations").value = locationsMeta.map((item) => item.name).join("\n");
+  document.getElementById("weapons").value = weaponsMeta.map((item) => item.name).join("\n");
+  suspectDescriptions.value = suspectsMeta.map((item) => item.description || "").join("\n");
+  locationDescriptions.value = locationsMeta.map((item) => item.description || "").join("\n");
+  weaponDescriptions.value = weaponsMeta.map((item) => item.description || "").join("\n");
   document.getElementById("tags").value = (detail.tags || []).join(", ");
   solutionTbd.checked = Boolean(detail.solutionTbd);
   syncSolutionSelectors(detail);
@@ -517,9 +601,9 @@ function renderDetail() {
       detailTags.appendChild(chip);
     });
   }
-  fillList(detailSuspects, state.detail.suspects);
-  fillList(detailLocations, state.detail.locations);
-  fillList(detailWeapons, state.detail.weapons);
+  renderEntityList(detailSuspects, state.detail.suspectsMeta, state.detail.suspects);
+  renderEntityList(detailLocations, state.detail.locationsMeta, state.detail.locations);
+  renderEntityList(detailWeapons, state.detail.weaponsMeta, state.detail.weapons);
   detailSolution.innerHTML = "";
   if (state.detail.solutionTbd) {
     const chip = document.createElement("div");
@@ -569,7 +653,11 @@ async function cloneMystery(id) {
     suspects: data.suspects,
     locations: data.locations,
     weapons: data.weapons,
+    suspectsMeta: data.suspectsMeta || [],
+    locationsMeta: data.locationsMeta || [],
+    weaponsMeta: data.weaponsMeta || [],
     tags: data.tags || [],
+    solutionTbd: data.solutionTbd,
     solutionSuspect: data.solutionSuspect,
     solutionLocation: data.solutionLocation,
     solutionWeapon: data.solutionWeapon
@@ -865,12 +953,28 @@ async function renderGrid() {
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
   formError.textContent = "";
+  validateDescriptions();
+  const suspectsParsed = buildMetaFromLists(
+    document.getElementById("suspects").value,
+    suspectDescriptions.value
+  );
+  const locationsParsed = buildMetaFromLists(
+    document.getElementById("locations").value,
+    locationDescriptions.value
+  );
+  const weaponsParsed = buildMetaFromLists(
+    document.getElementById("weapons").value,
+    weaponDescriptions.value
+  );
   const payload = {
     title: document.getElementById("title").value.trim(),
     clues: document.getElementById("clues").value.trim(),
-    suspects: splitLines(document.getElementById("suspects").value),
-    locations: splitLines(document.getElementById("locations").value),
-    weapons: splitLines(document.getElementById("weapons").value),
+    suspects: suspectsParsed.names,
+    locations: locationsParsed.names,
+    weapons: weaponsParsed.names,
+    suspectsMeta: suspectsParsed.meta,
+    locationsMeta: locationsParsed.meta,
+    weaponsMeta: weaponsParsed.meta,
     tags: splitLines(document.getElementById("tags").value),
     solutionTbd: solutionTbd.checked,
     solutionSuspect: solutionSuspect.value,
@@ -1043,6 +1147,17 @@ init();
 
 [solutionSuspect, solutionLocation, solutionWeapon].forEach((select) => {
   select.addEventListener("change", scheduleDraftSave);
+});
+
+[suspectDescriptions, locationDescriptions, weaponDescriptions].forEach((field) => {
+  field.addEventListener("input", () => {
+    scheduleDraftSave();
+    validateDescriptions();
+  });
+});
+
+["suspects", "locations", "weapons"].forEach((id) => {
+  document.getElementById(id).addEventListener("input", validateDescriptions);
 });
 
 solutionTbd.addEventListener("change", () => {

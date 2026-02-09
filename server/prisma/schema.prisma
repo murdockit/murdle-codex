@@ -15,6 +15,9 @@ model Mystery {
   suspects  String[]
   locations String[]
   weapons   String[]
+  suspectsMeta  Json @default("[]")
+  locationsMeta Json @default("[]")
+  weaponsMeta   Json @default("[]")
   tags      String[]
   solutionTbd      Boolean @default(false)
   solutionSuspect  String?

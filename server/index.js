@@ -19,12 +19,31 @@ function sanitizeList(value) {
     .filter((item) => item.length > 0);
 }
 
+function normalizeMeta(names, meta) {
+  const metaArray = Array.isArray(meta) ? meta : [];
+  const map = new Map();
+  metaArray.forEach((item) => {
+    if (!item || typeof item.name !== "string") return;
+    map.set(item.name.trim(), {
+      name: item.name.trim(),
+      description: typeof item.description === "string" ? item.description.trim() : ""
+    });
+  });
+  return names.map((name) => ({
+    name,
+    description: map.get(name)?.description || ""
+  }));
+}
+
 function validatePayload(body) {
   const title = typeof body.title === "string" ? body.title.trim() : "";
   const clues = typeof body.clues === "string" ? body.clues.trim() : "";
   const suspects = sanitizeList(body.suspects);
   const locations = sanitizeList(body.locations);
   const weapons = sanitizeList(body.weapons);
+  const suspectsMeta = normalizeMeta(suspects, body.suspectsMeta);
+  const locationsMeta = normalizeMeta(locations, body.locationsMeta);
+  const weaponsMeta = normalizeMeta(weapons, body.weaponsMeta);
   const tags = sanitizeList(body.tags);
   const solutionTbd = Boolean(body.solutionTbd);
   const solutionSuspect =
@@ -59,6 +78,9 @@ function validatePayload(body) {
       suspects,
       locations,
       weapons,
+      suspectsMeta,
+      locationsMeta,
+      weaponsMeta,
       tags,
       solutionTbd,
       solutionSuspect: solutionTbd ? null : solutionSuspect,
@@ -94,6 +116,12 @@ function validateDraftPayload(body) {
   const suspects = typeof data.suspects === "string" ? data.suspects : "";
   const locations = typeof data.locations === "string" ? data.locations : "";
   const weapons = typeof data.weapons === "string" ? data.weapons : "";
+  const suspectDescriptions =
+    typeof data.suspectDescriptions === "string" ? data.suspectDescriptions : "";
+  const locationDescriptions =
+    typeof data.locationDescriptions === "string" ? data.locationDescriptions : "";
+  const weaponDescriptions =
+    typeof data.weaponDescriptions === "string" ? data.weaponDescriptions : "";
   const tags = typeof data.tags === "string" ? data.tags : "";
   const solutionTbd = Boolean(data.solutionTbd);
   const solutionSuspect =
@@ -111,6 +139,9 @@ function validateDraftPayload(body) {
       suspects,
       locations,
       weapons,
+      suspectDescriptions,
+      locationDescriptions,
+      weaponDescriptions,
       tags,
       solutionTbd,
       solutionSuspect,
