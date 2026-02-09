@@ -8,6 +8,7 @@ const draftStatus = document.getElementById("draft-status");
 const solutionSuspect = document.getElementById("solution-suspect");
 const solutionLocation = document.getElementById("solution-location");
 const solutionWeapon = document.getElementById("solution-weapon");
+const solutionTbd = document.getElementById("solution-tbd");
 
 const listEl = document.getElementById("mystery-list");
 const detailEmpty = document.getElementById("detail-empty");
@@ -105,6 +106,13 @@ function syncSolutionSelectors(detail) {
   buildSelectOptions(solutionWeapon, weapons, detail?.solutionWeapon || solutionWeapon.value);
 }
 
+function updateSolutionTbdUI() {
+  const disabled = Boolean(solutionTbd.checked);
+  solutionSuspect.disabled = disabled;
+  solutionLocation.disabled = disabled;
+  solutionWeapon.disabled = disabled;
+}
+
 function makeToken(text, type) {
   const wrap = document.createElement("div");
   const token = document.createElement("div");
@@ -178,6 +186,7 @@ function collectDraftData() {
     locations: document.getElementById("locations").value,
     weapons: document.getElementById("weapons").value,
     tags: document.getElementById("tags").value,
+    solutionTbd: solutionTbd.checked,
     solutionSuspect: solutionSuspect.value,
     solutionLocation: solutionLocation.value,
     solutionWeapon: solutionWeapon.value
@@ -192,11 +201,13 @@ function applyDraft(draft) {
   document.getElementById("locations").value = draft.locations || "";
   document.getElementById("weapons").value = draft.weapons || "";
   document.getElementById("tags").value = draft.tags || "";
+  solutionTbd.checked = Boolean(draft.solutionTbd);
   syncSolutionSelectors({
     solutionSuspect: draft.solutionSuspect || "",
     solutionLocation: draft.solutionLocation || "",
     solutionWeapon: draft.solutionWeapon || ""
   });
+  updateSolutionTbdUI();
   if (draft.savedAt) {
     setDraftStatus(`Draft saved ${formatDate(draft.savedAt)}`, true);
   } else {
@@ -411,6 +422,12 @@ function renderList() {
 
     const tags = document.createElement("div");
     tags.className = "tag-row";
+    if (item.solutionTbd) {
+      const badge = document.createElement("div");
+      badge.className = "tag-chip badge";
+      badge.textContent = "Solution TBD";
+      tags.appendChild(badge);
+    }
     if (Array.isArray(item.tags)) {
       item.tags.forEach((tag) => {
         const chip = document.createElement("div");
@@ -463,7 +480,9 @@ function populateForm(detail) {
   document.getElementById("locations").value = detail.locations.join("\n");
   document.getElementById("weapons").value = detail.weapons.join("\n");
   document.getElementById("tags").value = (detail.tags || []).join(", ");
+  solutionTbd.checked = Boolean(detail.solutionTbd);
   syncSolutionSelectors(detail);
+  updateSolutionTbdUI();
   formTitle.textContent = "Edit Mystery";
   saveButton.textContent = "Update Mystery";
   cancelEditButton.classList.remove("hidden");
@@ -484,6 +503,12 @@ function renderDetail() {
   detailTitle.textContent = state.detail.title;
   detailClues.textContent = state.detail.clues;
   detailTags.innerHTML = "";
+  if (state.detail.solutionTbd) {
+    const badge = document.createElement("div");
+    badge.className = "tag-chip badge";
+    badge.textContent = "Solution TBD";
+    detailTags.appendChild(badge);
+  }
   if (Array.isArray(state.detail.tags)) {
     state.detail.tags.forEach((tag) => {
       const chip = document.createElement("div");
@@ -496,14 +521,29 @@ function renderDetail() {
   fillList(detailLocations, state.detail.locations);
   fillList(detailWeapons, state.detail.weapons);
   detailSolution.innerHTML = "";
-  ["solutionSuspect", "solutionLocation", "solutionWeapon"].forEach((key) => {
-    const value = state.detail[key];
-    if (!value) return;
+  if (state.detail.solutionTbd) {
     const chip = document.createElement("div");
     chip.className = "solution-chip";
-    chip.textContent = value;
+    chip.textContent = "Solution TBD";
     detailSolution.appendChild(chip);
-  });
+  } else {
+    const solutionValues = ["solutionSuspect", "solutionLocation", "solutionWeapon"]
+      .map((key) => state.detail[key])
+      .filter(Boolean);
+    if (solutionValues.length === 0) {
+      const chip = document.createElement("div");
+      chip.className = "solution-chip";
+      chip.textContent = "No solution set yet";
+      detailSolution.appendChild(chip);
+    } else {
+      solutionValues.forEach((value) => {
+        const chip = document.createElement("div");
+        chip.className = "solution-chip";
+        chip.textContent = value;
+        detailSolution.appendChild(chip);
+      });
+    }
+  }
   renderChecklist();
   renderGrid();
 }
@@ -832,6 +872,7 @@ form.addEventListener("submit", async (event) => {
     locations: splitLines(document.getElementById("locations").value),
     weapons: splitLines(document.getElementById("weapons").value),
     tags: splitLines(document.getElementById("tags").value),
+    solutionTbd: solutionTbd.checked,
     solutionSuspect: solutionSuspect.value,
     solutionLocation: solutionLocation.value,
     solutionWeapon: solutionWeapon.value
@@ -1002,6 +1043,16 @@ init();
 
 [solutionSuspect, solutionLocation, solutionWeapon].forEach((select) => {
   select.addEventListener("change", scheduleDraftSave);
+});
+
+solutionTbd.addEventListener("change", () => {
+  updateSolutionTbdUI();
+  if (solutionTbd.checked) {
+    solutionSuspect.value = "";
+    solutionLocation.value = "";
+    solutionWeapon.value = "";
+  }
+  scheduleDraftSave();
 });
 
 if (gridToolbar) {

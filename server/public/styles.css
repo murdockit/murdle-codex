@@ -311,6 +311,19 @@ button.danger {
   font-family: "Fraunces", "Georgia", serif;
 }
 
+.solution-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.solution-toggle input {
+  width: 18px;
+  height: 18px;
+}
+
 .solution-display {
   margin-bottom: 20px;
 }
@@ -344,6 +357,13 @@ button.danger {
   border: 1px solid var(--border);
   font-size: 0.82rem;
   color: var(--muted);
+}
+
+.tag-chip.badge {
+  background: #ffe3cc;
+  color: #8b3b17;
+  border-color: rgba(139, 59, 23, 0.2);
+  font-weight: 700;
 }
 
 .checklist-block h4 {

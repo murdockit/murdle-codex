@@ -1,0 +1,2 @@
+ALTER TABLE "Mystery"
+ADD COLUMN "solutionTbd" BOOLEAN NOT NULL DEFAULT false;

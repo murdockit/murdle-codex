@@ -16,6 +16,7 @@ model Mystery {
   locations String[]
   weapons   String[]
   tags      String[]
+  solutionTbd      Boolean @default(false)
   solutionSuspect  String?
   solutionLocation String?
   solutionWeapon   String?

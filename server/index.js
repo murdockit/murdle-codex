@@ -26,6 +26,7 @@ function validatePayload(body) {
   const locations = sanitizeList(body.locations);
   const weapons = sanitizeList(body.weapons);
   const tags = sanitizeList(body.tags);
+  const solutionTbd = Boolean(body.solutionTbd);
   const solutionSuspect =
     typeof body.solutionSuspect === "string" ? body.solutionSuspect.trim() : "";
   const solutionLocation =
@@ -39,16 +40,13 @@ function validatePayload(body) {
   if (suspects.length === 0) errors.push("At least one suspect is required.");
   if (locations.length === 0) errors.push("At least one location is required.");
   if (weapons.length === 0) errors.push("At least one weapon is required.");
-  if (!solutionSuspect) errors.push("Solution suspect is required.");
-  if (!solutionLocation) errors.push("Solution location is required.");
-  if (!solutionWeapon) errors.push("Solution weapon is required.");
-  if (solutionSuspect && !suspects.includes(solutionSuspect)) {
+  if (!solutionTbd && solutionSuspect && !suspects.includes(solutionSuspect)) {
     errors.push("Solution suspect must match a suspect.");
   }
-  if (solutionLocation && !locations.includes(solutionLocation)) {
+  if (!solutionTbd && solutionLocation && !locations.includes(solutionLocation)) {
     errors.push("Solution location must match a location.");
   }
-  if (solutionWeapon && !weapons.includes(solutionWeapon)) {
+  if (!solutionTbd && solutionWeapon && !weapons.includes(solutionWeapon)) {
     errors.push("Solution weapon must match a weapon.");
   }
 
@@ -62,9 +60,10 @@ function validatePayload(body) {
       locations,
       weapons,
       tags,
-      solutionSuspect,
-      solutionLocation,
-      solutionWeapon
+      solutionTbd,
+      solutionSuspect: solutionTbd ? null : solutionSuspect,
+      solutionLocation: solutionTbd ? null : solutionLocation,
+      solutionWeapon: solutionTbd ? null : solutionWeapon
     }
   };
 }
@@ -96,6 +95,7 @@ function validateDraftPayload(body) {
   const locations = typeof data.locations === "string" ? data.locations : "";
   const weapons = typeof data.weapons === "string" ? data.weapons : "";
   const tags = typeof data.tags === "string" ? data.tags : "";
+  const solutionTbd = Boolean(data.solutionTbd);
   const solutionSuspect =
     typeof data.solutionSuspect === "string" ? data.solutionSuspect : "";
   const solutionLocation =
@@ -112,6 +112,7 @@ function validateDraftPayload(body) {
       locations,
       weapons,
       tags,
+      solutionTbd,
       solutionSuspect,
       solutionLocation,
       solutionWeapon
@@ -140,7 +141,8 @@ app.get("/api/mysteries", async (req, res) => {
         suspects: true,
         locations: true,
         weapons: true,
-        tags: true
+        tags: true,
+        solutionTbd: true
       }
     });
 
@@ -152,7 +154,8 @@ app.get("/api/mysteries", async (req, res) => {
         suspectCount: Array.isArray(item.suspects) ? item.suspects.length : 0,
         locationCount: Array.isArray(item.locations) ? item.locations.length : 0,
         weaponCount: Array.isArray(item.weapons) ? item.weapons.length : 0,
-        tags: item.tags || []
+        tags: item.tags || [],
+        solutionTbd: Boolean(item.solutionTbd)
       }))
     );
   } catch (err) {
